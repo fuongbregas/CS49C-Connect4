@@ -5,6 +5,8 @@
 
 
 #define ANSI_COLOR_RED     "\x1b[31m"
+#define ANSI_COLOR_CYAN    "\x1b[36m"
+
 #define ANSI_COLOR_RESET   "\x1b[0m"
 #define BOARD_ROWS 8
 #define BOARD_COLS 8
@@ -56,17 +58,22 @@ void printBoard(char *board) {
 		for (col = 0; col < BOARD_COLS; col++) {
 			if ('X' == board[BOARD_COLS * row + col])
 			{
-				
-				printf(ANSI_COLOR_RED "| %c " , board[BOARD_COLS * row + col]);
+				printf("|");
+				printf(ANSI_COLOR_RED " %c " ANSI_COLOR_RESET "", board[BOARD_COLS * row + col]);
+			}
+			else if ('O' == board[BOARD_COLS * row + col])
+			{
+			    printf("|");
+				printf(ANSI_COLOR_CYAN " %c " ANSI_COLOR_RESET "", board[BOARD_COLS * row + col]);
 			}
 			else
 			{
-				printf("| %c ", board[BOARD_COLS * row + col]);
+			    printf("| %c ", board[BOARD_COLS * row + col]);
 			}
 			
 		}
 		puts("|");
-		puts("--------------------------------");
+		puts("---------------------------------");
 
 	}
 	
@@ -77,7 +84,7 @@ int takeTurn(char *board, int player, const char *PIECES) {
 	printf("Player %d (%c):\nEnter number coordinate: ", player + 1, PIECES[player]);
 
 	while (1) {
-		if (1 != scanf_s("%d", &col) || col < 1 || col > 8) {
+		if (1 != scanf("%d", &col) || col < 1 || col > 8) {
 			while (getchar() != '\n');
 			puts("Number out of bounds! Try again.");
 		}
