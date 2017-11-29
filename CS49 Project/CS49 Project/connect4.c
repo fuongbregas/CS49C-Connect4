@@ -1,7 +1,7 @@
 #include <stdio.h> 
 #include <string.h>
 #include <stdlib.h>
-#include <conio.h>
+//#include <cstdlib.h>
 
 
 #define ANSI_COLOR_RED     "\x1b[31m"
@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
 }
 void printBoard(char *board) {
 	int row, col;
-	
+	system("clear");
 
 	puts("\n    ****Connect Four****\n");
 	puts("  1   2   3   4   5   6   7   8\n");
@@ -73,7 +73,7 @@ void printBoard(char *board) {
 			
 		}
 		puts("|");
-		puts("---------------------------------");
+		puts(".................................");
 
 	}
 	
