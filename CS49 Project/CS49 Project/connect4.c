@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
             } else {
                 playerTwo.score++;
             }
-            cfPtr = fopen("/Users/riri/Documents/Riri/CS49C/Connect4/Connect4/winLog.txt", "w+");
+            cfPtr = fopen("/Users/riri/Documents/Riri/CS49C/Connect4/Connect4/winLog.txt", "a");
             if(cfPtr == NULL) {
                 puts("File could not be opened");
             } else {
@@ -251,7 +251,7 @@ int verticalCheck(char *board) {
 }
 int diagonalCheck(char *board) {
     int row, col, idx, count = 0;
-    const int DIAG_RGT = 8, DIAG_LFT = 8;
+    const int DIAG_RGT = 7, DIAG_LFT = 9;
     
     for (row = 0; row < BOARD_ROWS - 3; row++) {
         for (col = 0; col < BOARD_COLS; col++) {
@@ -266,5 +266,4 @@ int diagonalCheck(char *board) {
     return 0;
     
 }
-
 
