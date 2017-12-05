@@ -173,12 +173,12 @@ void printBoard(char *board) {
             if ('X' == board[BOARD_COLS * row + col])
             {
                 printf("|");
-                printf("%2c ", board[BOARD_COLS * row + col]);
+                printf(ANSI_COLOR_RED"%2c "ANSI_COLOR_RESET "", board[BOARD_COLS * row + col]);
             }
             else if ('O' == board[BOARD_COLS * row + col])
             {
                 printf("|");
-                printf("%2c ", board[BOARD_COLS * row + col]);
+                printf(ANSI_COLOR_CYAN "%2c " ANSI_COLOR_RESET "", board[BOARD_COLS * row + col]);
             }
             else
             {
