@@ -1,8 +1,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-//#include <cstdlib.h>
-
+#include <sys/time.h>
+#include <unistd.h>
+#include <signal.h>
+#include <sys/types.h>
 
 #define ANSI_COLOR_RED     "\x1b[31m"
 #define ANSI_COLOR_CYAN    "\x1b[36m"
@@ -11,6 +13,7 @@
 #define BOARD_ROWS 8
 #define BOARD_COLS 8
 
+#define WAIT 10
 
 typedef struct PlayerScore {
     int score;
@@ -23,7 +26,7 @@ void setSymbol(scores *playerOne, char playerOnePiece);
 void updatePlayerScore(scores *scoresPtr, char *playerName, int playerScore);
 void printBoard(char *board);
 void printGameRules();
-int takeTurn(char *board, int player, const char*);
+int takeTurn(char *board, int player, const char*, int *skipped);
 int checkWin(char *board);
 int checkFour(char *board, int, int, int, int);
 int horizontalCheck(char *board);
@@ -35,7 +38,7 @@ int main(int argc, char *argv[]) {
     char opt = greetingLines('0');
     scores playerOne;
     scores playerTwo;
-    char optRules;
+    // char optRules;
     FILE *cfPtr;
     int game = 1;
     
@@ -54,13 +57,16 @@ int main(int argc, char *argv[]) {
     updatePlayerScore(&playerTwo, "Player 2", 0);
     
     int turn, done = 0;
-    
-    while(playerOne.score < 2 && playerTwo.score < 2) {
+    int skipped = 0;
+    while(playerOne.score < 5 && playerTwo.score < 5) {
         for (turn = 0; turn < BOARD_ROWS * BOARD_COLS && !done; turn++) {
             printBoard(board);
-            while (!takeTurn(board, turn % 2, PIECES)) {
+            while (!takeTurn(board, turn % 2, PIECES, &skipped)) {
+                if(!skipped) {
+                    turn++;
+                }
                 printBoard(board);
-                puts("**Column full!**\n");
+                //puts("**Column full!**\n");
             }
             done = checkWin(board);
         }
@@ -72,7 +78,7 @@ int main(int argc, char *argv[]) {
         else {
             turn--;
             int playerTurn = turn % 2 + 1;
-            printf("Player %d (%c) wins!\n", playerTurn, PIECES[turn % 2]);
+            printf("Player %d (%c) wins this round!\n", playerTurn, PIECES[turn % 2]);
             if(playerTurn == 1) {
                 playerOne.score++;
             } else {
@@ -184,29 +190,69 @@ void printBoard(char *board) {
         puts(".................................");
         
     }
-    
-    
 }
-int takeTurn(char *board, int player, const char *PIECES) {
+
+int takeTurn(char *board, int player, const char *PIECES, int *skipped) {
     int row, col = 0;
-    printf("Player %d (%c):\nEnter number coordinate: ", player + 1, PIECES[player]);
+    int ready_for_reading = 0;
+    int read_bytes = 0;
+    char piece[3] = {0};
+    fd_set input_set;
+    struct timeval  timeout;
+    FD_ZERO(&input_set );
+    FD_SET(0, &input_set);
+    
+    timeout.tv_sec = WAIT;
+    timeout.tv_usec = 0;
+    
+    printf("Player %d (%c):\nEnter number coordinate. If 10 seconds have passed, your turn will be skipped: ", player + 1, PIECES[player], WAIT);
+    ready_for_reading = select(1, &input_set, NULL, NULL, &timeout);
+    
+    if(ready_for_reading) {
+        printf("Col: %d\n", col);
+        read_bytes = read(0, piece, 2);
+        if(piece[read_bytes-1]=='\n'){
+            --read_bytes;
+            piece[read_bytes]='\0';
+        }
+        if(read_bytes==0){
+            printf("You just hit enter\n");
+        } else {
+            char *ptr = &piece;
+            col = atoi(ptr);
+        }
+    } else {
+        col = -1;
+        printf("No input! Your turn is skipped.\n");
+        return 0;
+    }
+    
+    //    printf("Col is now: %d\n", col);
     
     for(;;) {
-        if (1 != scanf("%d", &col) || col < 1 || col > 8) {
+        if (col < 1 || col > 8) {
             while (getchar() != '\n');
             puts("Number out of bounds! Try again.");
+        } else if(col < 0) {
+            printf("Skipped!\n");
         }
         else {
             break;
         }
     }
-    col--;
     
-    for (row = BOARD_ROWS - 1; row >= 0; row--) {
-        if (board[BOARD_COLS * row + col] == ' ') {
-            board[BOARD_COLS * row + col] = PIECES[player];
-            return 1;
+    if(col != -1) {
+        skipped = 0;
+        col--;
+        
+        for (row = BOARD_ROWS - 1; row >= 0; row--) {
+            if (board[BOARD_COLS * row + col] == ' ') {
+                board[BOARD_COLS * row + col] = PIECES[player];
+                return 1;
+            }
         }
+    } else {
+        skipped = 1;
     }
     return 0;
     
@@ -224,7 +270,7 @@ int horizontalCheck(char *board) {
     const int WIDTH = 1;
     
     for (row = 0; row < BOARD_ROWS; row++) {
-        for (col = 0; col < BOARD_COLS - 4; col++) {
+        for (col = 0; col < BOARD_COLS - 3; col++) {
             idx = BOARD_COLS * row + col;
             if (checkFour(board, idx, idx + WIDTH, idx + WIDTH * 2, idx + WIDTH * 3)) {
                 return 1;
@@ -266,4 +312,3 @@ int diagonalCheck(char *board) {
     return 0;
     
 }
-
