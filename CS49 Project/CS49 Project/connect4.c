@@ -10,10 +10,10 @@
 #define ANSI_COLOR_CYAN    "\x1b[36m"
 
 #define ANSI_COLOR_RESET   "\x1b[0m"
-#define BOARD_ROWS 8
-#define BOARD_COLS 8
+#define ROW 8
+#define COLUMN 8
 
-#define WAIT 10
+#define WAIT 3
 
 typedef struct PlayerScore {
     int score;
@@ -26,18 +26,18 @@ void setSymbol(scores *playerOne, char playerOnePiece);
 void updatePlayerScore(scores *scoresPtr, char *playerName, int playerScore);
 void printBoard(char *board);
 void printGameRules();
-int takeTurn(char *board, int player, const char*, int *skipped);
-int checkWin(char *board);
-int checkFour(char *board, int, int, int, int);
-int horizontalCheck(char *board);
-int verticalCheck(char *board);
-int diagonalCheck(char *board);
+int switchTurn(char *board, int player, const char*, int *skipped);
+int checkWinCondition(char *board);
+int checkC4(char *board, int, int, int, int);
+int checkHorizontal(char *board);
+int checkVertical(char *board);
+int checkDiag(char *board);
 void printScoreBoard(scores *scoresPtrOne, scores *scoresPtrTwo);
 
 int main(int argc, char *argv[]) {
     char opt = greetingLines('0');
-    scores playerOne;
-    scores playerTwo;
+    scores p1;
+    scores p2;
     // char optRules;
     FILE *cfPtr;
     int game = 1;
@@ -50,29 +50,29 @@ int main(int argc, char *argv[]) {
     }
     
     const char *PIECES = "XO";
-    char board[BOARD_ROWS *BOARD_COLS];
-    memset(board, ' ', BOARD_ROWS * BOARD_COLS);
+    char board[ROW *COLUMN];
+    memset(board, ' ', ROW * COLUMN);
     
-    updatePlayerScore(&playerOne, "Player 1", 0);
-    updatePlayerScore(&playerTwo, "Player 2", 0);
+    updatePlayerScore(&p1, "Player 1", 0);
+    updatePlayerScore(&p2, "Player 2", 0);
     
     int turn, done = 0;
     int skipped = 0;
-    while(playerOne.score < 5 && playerTwo.score < 5) {
-        for (turn = 0; turn < BOARD_ROWS * BOARD_COLS && !done; turn++) {
+    while(p1.score < 5 && p2.score < 5) {
+        for (turn = 0; turn < ROW * COLUMN && !done; turn++) {
             printBoard(board);
-            while (!takeTurn(board, turn % 2, PIECES, &skipped)) {
+            while (!switchTurn(board, turn % 2, PIECES, &skipped)) {
                 if(!skipped) {
                     turn++;
                 }
                 printBoard(board);
                 //puts("**Column full!**\n");
             }
-            done = checkWin(board);
+            done = checkWinCondition(board);
         }
         printBoard(board);
         
-        if (turn == BOARD_ROWS * BOARD_COLS && !done) {
+        if (turn == ROW * COLUMN && !done) {
             puts("It's a tie!");
         }
         else {
@@ -80,34 +80,37 @@ int main(int argc, char *argv[]) {
             int playerTurn = turn % 2 + 1;
             printf("Player %d (%c) wins this round!\n", playerTurn, PIECES[turn % 2]);
             if(playerTurn == 1) {
-                playerOne.score++;
+                p1.score++;
             } else {
-                playerTwo.score++;
+                p2.score++;
             }
             cfPtr = fopen("/Users/riri/Documents/Riri/CS49C/Connect4/Connect4/winLog.txt", "a");
             if(cfPtr == NULL) {
                 puts("File could not be opened");
             } else {
                 fprintf(cfPtr, "Game: %d\n", game);
-                fprintf(cfPtr, "Player 1: %d\n", playerOne.score);
-                fprintf(cfPtr, "Player 2: %d\n", playerTwo.score);
+                fprintf(cfPtr, "Player 1: %d\n", p1.score);
+                fprintf(cfPtr, "Player 2: %d\n", p2.score);
                 fflush(cfPtr);
             }
             
-            printScoreBoard(&playerOne, &playerTwo);
+            printScoreBoard(&p1, &p2);
+            sleep(4);
             system("clear");
             turn = 0;
             done = 0;
-            memset(board, ' ', BOARD_ROWS * BOARD_COLS);
+            memset(board, ' ', ROW * COLUMN);
         }
     }
     
-    if(playerOne.score > playerTwo.score) {
+    if(p1.score > p2.score) {
         printf("Player one wins!\n");
         fprintf(cfPtr, "Player one wins!\n");
+        printScoreBoard(&p1, &p2);
     } else {
         printf("Player two wins!\n");
         fprintf(cfPtr, "Player two wins!\n");
+        printScoreBoard(&p1, &p2);
     }
     
     fclose(cfPtr);
@@ -168,21 +171,21 @@ void printBoard(char *board) {
     
     puts("\n    ****Connect Four****\n");
     puts("  1   2   3   4   5   6   7   8\n");
-    for (row = 0; row < BOARD_ROWS; row++) {
-        for (col = 0; col < BOARD_COLS; col++) {
-            if ('X' == board[BOARD_COLS * row + col])
+    for (row = 0; row < ROW; row++) {
+        for (col = 0; col < COLUMN; col++) {
+            if ('X' == board[COLUMN * row + col])
             {
                 printf("|");
-                printf(ANSI_COLOR_RED"%2c "ANSI_COLOR_RESET "", board[BOARD_COLS * row + col]);
+                printf(ANSI_COLOR_RED"%2c "ANSI_COLOR_RESET "", board[COLUMN * row + col]);
             }
-            else if ('O' == board[BOARD_COLS * row + col])
+            else if ('O' == board[COLUMN * row + col])
             {
                 printf("|");
-                printf(ANSI_COLOR_CYAN "%2c " ANSI_COLOR_RESET "", board[BOARD_COLS * row + col]);
+                printf(ANSI_COLOR_CYAN "%2c " ANSI_COLOR_RESET "", board[COLUMN * row + col]);
             }
             else
             {
-                printf("| %c ", board[BOARD_COLS * row + col]);
+                printf("| %c ", board[COLUMN * row + col]);
             }
             
         }
@@ -192,7 +195,7 @@ void printBoard(char *board) {
     }
 }
 
-int takeTurn(char *board, int player, const char *PIECES, int *skipped) {
+int switchTurn(char *board, int player, const char *PIECES, int *skipped) {
     int row, col = 0;
     int ready_for_reading = 0;
     int read_bytes = 0;
@@ -233,6 +236,7 @@ int takeTurn(char *board, int player, const char *PIECES, int *skipped) {
         if (col < 1 || col > 8) {
             while (getchar() != '\n');
             puts("Number out of bounds! Try again.");
+            scanf(" %d", &col);
         } else if(col < 0) {
             printf("Skipped!\n");
         }
@@ -245,9 +249,9 @@ int takeTurn(char *board, int player, const char *PIECES, int *skipped) {
         skipped = 0;
         col--;
         
-        for (row = BOARD_ROWS - 1; row >= 0; row--) {
-            if (board[BOARD_COLS * row + col] == ' ') {
-                board[BOARD_COLS * row + col] = PIECES[player];
+        for (row = ROW - 1; row >= 0; row--) {
+            if (board[COLUMN * row + col] == ' ') {
+                board[COLUMN * row + col] = PIECES[player];
                 return 1;
             }
         }
@@ -257,22 +261,22 @@ int takeTurn(char *board, int player, const char *PIECES, int *skipped) {
     return 0;
     
 }
-int checkWin(char *board) {
-    return (horizontalCheck(board) || verticalCheck(board) || diagonalCheck(board));
+int checkWinCondition(char *board) {
+    return (checkHorizontal(board) || checkVertical(board) || checkDiag(board));
     
 }
-int checkFour(char *board, int a, int b, int c, int d) {
+int checkC4(char *board, int a, int b, int c, int d) {
     return (board[a] == board[b] && board[b] == board[c] && board[c] == board[d] && board[a] != ' ');
     
 }
-int horizontalCheck(char *board) {
-    int row, col, idx;
+int checkHorizontal(char *board) {
+    int row, col, id;
     const int WIDTH = 1;
     
-    for (row = 0; row < BOARD_ROWS; row++) {
-        for (col = 0; col < BOARD_COLS - 3; col++) {
-            idx = BOARD_COLS * row + col;
-            if (checkFour(board, idx, idx + WIDTH, idx + WIDTH * 2, idx + WIDTH * 3)) {
+    for (row = 0; row < ROW; row++) {
+        for (col = 0; col < COLUMN - 3; col++) {
+            id = COLUMN * row + col;
+            if (checkC4(board, id, id + WIDTH, id + WIDTH * 2, id + WIDTH * 3)) {
                 return 1;
             }
         }
@@ -280,34 +284,35 @@ int horizontalCheck(char *board) {
     return 0;
 }
 
-int verticalCheck(char *board) {
-    int row, col, idx;
-    const int HEIGHT = 8;
+int checkDiag(char *board) {
+    int row, col, id, count = 0;
+    const int DIAG = 7, DIAG_LFT = 9;
     
-    for (row = 0; row < BOARD_ROWS - 3; row++) {
-        for (col = 0; col < BOARD_COLS; col++) {
-            idx = BOARD_COLS * row + col;
-            if (checkFour(board, idx, idx + HEIGHT, idx + HEIGHT * 2, idx + HEIGHT * 3)) {
-                return 1;
-            }
-        }
-    }
-    return 0;
-    
-}
-int diagonalCheck(char *board) {
-    int row, col, idx, count = 0;
-    const int DIAG_RGT = 7, DIAG_LFT = 9;
-    
-    for (row = 0; row < BOARD_ROWS - 3; row++) {
-        for (col = 0; col < BOARD_COLS; col++) {
-            idx = BOARD_COLS * row + col;
-            if ((count <= 3 && checkFour(board, idx, idx + DIAG_LFT, idx + DIAG_LFT * 2, idx + DIAG_LFT * 3)) || (count >= 3 && checkFour(board, idx, idx + DIAG_RGT, idx + DIAG_RGT * 2, idx + DIAG_RGT * 3))) {
+    for (row = 0; row < ROW - 3; row++) {
+        for (col = 0; col < COLUMN; col++) {
+            id = COLUMN * row + col;
+            if ((count <= 3 && checkC4(board, id, id + DIAG_LFT, id + DIAG_LFT * 2, id + DIAG_LFT * 3)) || (count >= 3 && checkC4(board, id, id + DIAG, id + DIAG * 2, id + DIAG * 3))) {
                 return 1;
             }
             count++;
         }
         count = 0;
+    }
+    return 0;
+    
+}
+
+int checkVertical(char *board) {
+    int row, col, id;
+    const int HEIGHT = 8;
+    
+    for (row = 0; row < ROW - 3; row++) {
+        for (col = 0; col < COLUMN; col++) {
+            id = COLUMN * row + col;
+            if (checkC4(board, id, id + HEIGHT, id + HEIGHT * 2, id + HEIGHT * 3)) {
+                return 1;
+            }
+        }
     }
     return 0;
     
